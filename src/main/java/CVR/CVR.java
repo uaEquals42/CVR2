@@ -5,13 +5,14 @@
 package CVR;
 
 import java.awt.Color;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.logging.Level;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,9 +47,11 @@ public class CVR {
         return ChuckDatabaseName;
     }
 
+    public PaletteContainer getPalette(){
+        return palette;
+    }
     
-    
-    
+
     
     
     
@@ -64,8 +67,8 @@ public class CVR {
             String cvrName;
             final ByteBuffer byteBuff;
         
-        public Builder(byte[] cvrFile) throws CorruptedFileException, SectionNotFoundException {
-        
+        public Builder(Path location) throws CorruptedFileException, SectionNotFoundException, IOException {
+            byte[] cvrFile = Files.readAllBytes(location);
             sourceFile = cvrFile;
 
             byteBuff = ByteBuffer.wrap(cvrFile).order(ByteOrder.LITTLE_ENDIAN).asReadOnlyBuffer();
@@ -352,6 +355,7 @@ public class CVR {
                     for (int shade = 0; shade < 24; shade++) {
                         byteBuff.get();
                         byteBuff.get();  // TODO:  Get this converted into color.
+                        log.warn("Material Section Exists, no code for converting into color");
                     }
                 }
             } catch (SectionNotFoundException ex) {

@@ -1,0 +1,355 @@
+The file is a set of variable-length chunks with some chunks nested inside each other.  Each chunk begins with the header:
+
+0000    uint32       Tag
+0004    uint32       Size including this header
+0008    <data>
+Size    <next chunk>
+
+Some chunks contain only other chunks (the ones with "Container" in their name), while others contain actual data.
+
+The tag values are:
+
+typedef enum CVRCHUNK_E {
+    CVRCHUNK_FILE_CONTAINER         = 0x00525643,
+    CVRCHUNK_VERSION                = 0x01000000,
+    CVRCHUNK_DB_NAME                = 0x02000000,
+
+    CVRCHUNK_PALETTE_CONTAINER      = 0x03000000,
+    CVRCHUNK_PALETTE_NAME           = 0x01010000,
+    CVRCHUNK_PALETTE_DATA           = 0x01020000,
+    CVRCHUNK_MATERIAL               = 0x01030000,
+
+    CVRCHUNK_SCENE_CONTAINER        = 0x04000000,
+    CVRCHUNK_SCENE_NAME             = 0x04010000,
+    CVRCHUNK_OBJECT_COUNTER         = 0x04020000,
+    CVRCHUNK_FRAME_COUNTER          = 0x04030000,
+
+    CVRCHUNK_OBJECT_CONTAINER       = 0x04040000,
+    CVRCHUNK_OBJECT_NAME            = 0x04040100,
+
+    CVRCHUNK_GEOMETRY_CONTAINER     = 0x04040200,
+    CVRCHUNK_VOXEL_OBJECT           = 0x04040201,
+
+    CVRCHUNK_ANIMATION_CONTAINER    = 0x04040300,
+    CVRCHUNK_OBJECT_FLAG            = 0x04040301,
+    CVRCHUNK_OBJECT_LOCATION        = 0x04040302,
+    CVRCHUNK_OBJECT_MATRIX          = 0x04040303,
+} CVR_CHUNK_E;
+
+
+Chunks are described below.
+
+CVRCHUNK_FILE_CONTAINER (0x00525643)
+------------------------------------
+Always at the start of the file, and contains all the other chunks in the file.
+
+Child chunks:
+    CVRCHUNK_VERSION (1)
+    CVRCHUNK_DB_NAME (1)
+    CVRCHUNK_PALETTE_CONTAINER (1)
+    CVRCHUNK_SCENE_CONTAINER (1)
+
+CVRCHUNK_VERSION (0x01000000)
+-----------------------------
+File version.
+
+Data:
+0000   float32    Version # 
+
+CVRCHUNK_DB_NAME (0x02000000)
+-----------------------------
+Original .max file name
+
+Data:
+0000   ascii       Name, length given by chunk size.
+
+CVRCHUNK_PALETTE_CONTAINER (0x03000000)
+---------------------------------------
+Contains Palette related chunks.
+
+Child chunks:
+    CVRCHUNK_PALETTE_NAME (1)
+    CVRCHUNK_PALETTE_DATA (1)
+    CVRCHUNK_MATERIAL (0-1)
+
+CVRCHUNK_PALETTE_NAME (0x01010000)
+----------------------------------
+Text name for palette
+
+Data:
+0000    ascii       Name, length given by chunk size.
+
+
+CVRCHUNK_PALETTE_DATA (0x01020000)
+----------------------------------
+8-bit palette color tables
+
+0000    uint8           First color index used.
+0001    uint8           Last color index used.
+0002    0x100*RGB24     Physical Palette as array[256] of 3-byte RGB values.
+0102    0x18*0x100*uint8 Shade Array[24][256] of byte indexes into Physical Palette.
+                        <Light Level(0-23)>*256 + <Voxel Color Index> gives index 
+                        of color in Physical Palette.
+
+CVRCHUNK_MATERIAL (0x01030000)
+------------------------------
+16-bit color tables
+
+0000    0x18*0x100*uint16 ShadeArray[24][256] of 16 bit R5G5B5 color values.
+                          <Light Level(0-23)>*512 + <Voxel Color Index>*2 gives
+                          R5G5B5 color value for voxel.
+
+CVRCHUNK_SCENE_CONTAINER (0x04000000)
+-------------------------------------
+Contains voxel and animation chunks.
+
+Child Chunks:
+    CVRCHUNK_SCENE_NAME (1)
+    CVRCHUNK_OBJECT_COUNTER (0-1)
+    CVRCHUNK_FRAME_COUNTER (0-1)
+    CVRCHUNK_OBJECT_CONTAINER (0+)
+
+CVRCHUNK_SCENE_NAME (0x04010000)
+--------------------------------
+Text name for scene (usually same as DB name)
+
+Data:
+0000    ascii       Name, length given by chunk size.
+
+CVRCHUNK_OBJECT_COUNTER (0x04020000)
+------------------------------------
+Number of objects in this scene
+
+Data:
+0000    uint32      # of objects in scene
+
+
+CVRCHUNK_FRAME_COUNTER (0x04030000)
+-----------------------------------
+Number of frames in the animation of this scene
+
+Data:
+0000    uint32      # of frames in scene (1+)
+
+CVRCHUNK_OBJECT_CONTAINER (0x04040000)
+--------------------------------------
+Container for chunks related to a single object
+
+Child chunks:
+    CVRCHUNK_OBJECT_NAME (1)
+    CVRCHUNK_GEOMETRY_CONTAINER (0-1)
+    CVRCHUNK_ANIMATION_CONTAINER (1)
+
+CVRCHUNK_OBJECT_NAME (0x04040100)
+---------------------------------
+Text name for object
+
+Data:
+0000    ascii       Name, length given by chunk size.
+
+CVRCHUNK_GEOMETRY_CONTAINER (0x04040200)
+----------------------------------------
+Container for voxel information
+
+Child Chunks:
+    CVRCHUNK_VOXEL_OBJECT
+
+CVRCHUNK_VOXEL_OBJECT (0x04040201)
+----------------------------------
+Voxel information for object
+
+Data Types:
+
+SVECTOR3(6)
+0000    int16       Z
+0002    int16       X
+0004    int16       Y
+
+VOXEL_HEADER(0x2A)
+0000    uint32      Flags.  1 = Next voxel group has its own VOXEL_HEADER
+                            2 = Next voxel group has its own JUMP_HEADER
+                            4 = Unused
+                            8 = Used but unknown what it means
+0004    uint32      Size of voxel object from start of first VOXEL_HEADER
+0008    float32     Units per 3D pixel
+000C    uint32      If Flags & 1: bytes to next VOXEL_HEADER from start of
+                        this header
+                    Else: same of offset 0004.
+0010    uint32      If Flags & 1: bytes to last byte of this voxel group
+                    Else: bytes to last byte of voxel object
+0014    SVECTOR3    Scale
+001A    SVECTOR3    Position
+0020    SVECTOR3    Rotation Center
+0026    uint32      If Flags & 1: # voxels until next VOXEL_HEADER
+                    Else: # voxels in object
+
+JUMP_HEADER(0x20 or 0x24)
+0000    SVECTOR3    Position
+0006    SVECTOR3    v2--unknown vector, used determining max size
+000C    SVECTOR3    v3--unknown vector, used determining max size
+0012    SVECTOR3    PositionOffset--start drawing at Position+PositionOffset
+0018    uint32      # of voxels in this jump group
+001C    uint32      JumpFlags.  1 = Has Offset
+<020    uint32      Offset to next JUMP_HEADER.  Present only if
+                    JumpFlags & 1>
+
+VOXEL_DATA
+0000    uint8       Direction (see addendum)
+0004    uint8       Normal (see addendum)
+0008    uint8       Color index into shading tables
+
+Data layout depends on Flags.
+
+Flags & 1:
+VOXEL_HEADER
+array of VOXEL_DATA
+VOXEL_HEADER
+array of VOXEL_DATA
+....
+
+Flags & 2:
+VOXEL_HEADER
+JUMP_HEADER
+array of VOXEL_DATA
+JUMP_HEADER
+array of VOXEL_DATA
+...
+
+!(Flags & 3):
+VOXEL_HEADER
+array of VOXEL_DATA
+
+CVRCHUNK_ANIMATION_CONTAINER (0x04040300)
+-----------------------------------------
+Container for animation data.
+
+Child chunks:
+CVRCHUNK_OBJECT_FLAG (0-1)
+CVRCHUNK_OBJECT_LOCATION (0-1)
+CVRCHUNK_OBJECT_MATRIX (0-1)
+
+CVRCHUNK_OBJECT_FLAG (0x04040301)
+---------------------------------
+Array[FrameCount] of flags
+
+0000    uint8      ObjectFlag
+0004... repeated FrameCount times
+
+CVRCHUNK_OBJECT_LOCATION (0x04040302)
+-------------------------------------
+Array[FrameCount] of location vectors
+
+0000    float32     Z
+0004    float32     X
+0008    float32     Y
+001C... repeated FrameCount times
+
+CVRCHUNK_OBJECT_MATRIX (0x04040303)
+-----------------------------------
+Array[FrameCount] of 3x3 matrixes of float32 in Z,X,Y order
+
+0000    3*3*float32     Matrix
+0024... repeated FrameCount times
+
+Appendix
+========
+
+Example file layout
+-------------------
+ACOLPOD.cvr
+CVRCHUNK_FILE_CONTAINER 00000000 00091120
+    CVRCHUNK_VERSION 00000008 0000000c
+    CVRCHUNK_DB_NAME "MB_Alien_Pod2.max"  00000014 00000019
+    CVRCHUNK_PALETTE_CONTAINER 0000002D 00004b2d
+        CVRCHUNK_PALETTE_NAME "cavcols"  00000035 0000000f
+        CVRCHUNK_PALETTE_DATA 00000044 00001b0a
+        CVRCHUNK_MATERIAL 00001B4E 0000300c
+    CVRCHUNK_SCENE_CONTAINER 00004B5A 0008c5c6
+        CVRCHUNK_SCENE_NAME "MB_Alien_Pod2.max"  00004B62 00000019
+        CVRCHUNK_OBJECT_COUNTER (2)  00004B7B 0000000c
+        CVRCHUNK_FRAME_COUNTER (15)  00004B87 0000000c
+        CVRCHUNK_OBJECT_CONTAINER 00004B93 0008bdb6
+            CVRCHUNK_OBJECT_NAME "ACOLPOD"  00004B9B 0000000f
+            CVRCHUNK_GEOMETRY_CONTAINER 00004BAA 0008baa0
+                CVRCHUNK_VOXEL_OBJECT 00004BB2 0008ba98
+            CVRCHUNK_ANIMATION_CONTAINER 0009064A 000002ff
+                CVRCHUNK_OBJECT_FLAG 00090652 00000017
+                CVRCHUNK_OBJECT_LOCATION 00090669 000000bc
+                CVRCHUNK_OBJECT_MATRIX 00090725 00000224
+        CVRCHUNK_OBJECT_CONTAINER 00090949 000007d7
+            CVRCHUNK_OBJECT_NAME "Lit Objects"  00090951 00000013
+            CVRCHUNK_GEOMETRY_CONTAINER 00090964 000004bd
+                CVRCHUNK_VOXEL_OBJECT 0009096C 000004b5
+            CVRCHUNK_ANIMATION_CONTAINER 00090E21 000002ff
+                CVRCHUNK_OBJECT_FLAG 00090E29 00000017
+                CVRCHUNK_OBJECT_LOCATION 00090E40 000000bc
+                CVRCHUNK_OBJECT_MATRIX 00090EFC 00000224
+
+Voxel Direction Element
+-----------------------
+The upper 5 bits control the direct of the next voxel.
+
+d = Direction >> 3
+
+    z   x   y
+00 -1  -1  -1
+01 -1  -1   0
+02 -1  -1   1
+03 -1   0  -1
+04 -1   0   0
+05 -1   0   1
+06 -1   1  -1
+07 -1   1   0
+08 -1   1   1
+
+09  0  -1  -1
+0A  0  -1   0
+0B  0  -1   1
+0C  0   0  -1
+0D  0   0   1
+0E  0   1  -1
+0F  0   1   0
+10  0   1   1
+
+11  1  -1  -1
+12  1  -1   0
+13  1  -1   1
+14  1   0  -1
+15  1   0   0
+16  1   0   1
+17  1   1  -1
+18  1   1   0
+19  1   1   1
+
+1A  STOP
+
+Voxel Normal Element
+--------------------
+
+n = ((Direction & 7) << 8) | Normal
+
+void DecodeNormal(DWORD n, double* x, double* y, double* z)
+{
+	// A1(0-23)*89+A2(0-88)
+	// Normally the highest number would be 23 * 89 + 88 = 2136,
+	// but because in the case of A1=0, we know Y=1.0, so X=Z=0.0, so A2 = 0,
+	// we compressed the range 0-88 down to 0
+	// In the case of A1=0, sin(A1)=0, so x & z will be 0 for any value
+	// from 0 to 88 below
+	n = n + 88;
+
+	// extract the original angles
+	// Angle1 = Z to X-axis
+	// Angle2 = Y to X-axis
+	DWORD dwAngle1 = 88 - n % 89;
+	DWORD dwAngle2 = n / 89;
+
+	// convert the angles to radians
+	double dAngle1 = dwAngle1 / 88.0 * 2.0 * PI;
+	double dAngle2 = dwAngle2 / 23.0 * PI / 2.0;
+
+	// convert the angles to coords in the range [-1, 1]
+	*z = sin(dAngle1) * sin(dAngle2);
+	*x = cos(dAngle1) * sin(dAngle2);
+	*y = cos(dAngle2);
+}

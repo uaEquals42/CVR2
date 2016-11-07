@@ -20,9 +20,9 @@ import org.slf4j.LoggerFactory;
  *
  * @author Gregory Jordan
  */
-public class CVRTest {
-    static Logger log = LoggerFactory.getLogger(CVRTest.class);
-    public CVRTest() {
+public class OldCVRTest {
+    static Logger log = LoggerFactory.getLogger(OldCVRTest.class);
+    public OldCVRTest() {
     }
     
     @BeforeClass
@@ -32,33 +32,33 @@ public class CVRTest {
 
     @Test
     public void loadAcvr(){
-        CVR cvr = loadCVR("A.cvr");
+        CVR cvr = loadCVR(Paths.get("A.cvr"));
         assertEquals("CVR version", 10.1, cvr.getCVRChunkVersion(),0.01);
         assertEquals("CVR DB Name", "BASIC.MAX", cvr.getChuckDatabaseName());
     }
     @Test
     public void loadAcolpodCvr(){
-        CVR cvr = loadCVR("ACOLPOD.cvr");
+        CVR cvr = loadCVR(Paths.get("ACOLPOD.cvr"));
         assertEquals("CVR version", 10.0, cvr.getCVRChunkVersion(),0.01);
         assertEquals("CVR DB Name", "MB_Alien_Pod2.max", cvr.getChuckDatabaseName());
     }
     @Test
     public void loadVwntuCvr(){
-        CVR cvr = loadCVR("Vwntu.cvr");
+        
+        CVR cvr = loadCVR(Paths.get("Vwntu.cvr"));
         assertEquals("CVR version", 10.1, cvr.getCVRChunkVersion(),0.01);
         assertEquals("CVR DB Name", "TERRAF.MAX", cvr.getChuckDatabaseName());
     }
     
     
-    private CVR loadCVR(String location){
+    private CVR loadCVR(Path location){
         log.info("test loading {}", location);
         CVR cvr=null;
         // TODO review the generated test code and remove the default call to fail.
-        Path path = Paths.get(location);
+        location = Paths.get("src/test/resources").resolve(location);
+        log.debug("Load from ", location.toString());
         try {
-            byte[] data = Files.readAllBytes(path);
-          
-            cvr = new CVR.Builder(data).build();
+            cvr = new CVR.Builder(location).build();
         } catch (IOException ex) {
             log.error("IOException");
             log.error(ex.getMessage());
