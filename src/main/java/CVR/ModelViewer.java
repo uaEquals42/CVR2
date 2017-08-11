@@ -16,6 +16,8 @@
  */
 package CVR;
 
+import CVR.fileformat.CorruptedFileException;
+import CVR.fileformat.SectionNotFoundException;
 import com.jme3.app.SimpleApplication;
 import com.jme3.light.AmbientLight;
 import com.jme3.light.PointLight;
@@ -30,6 +32,7 @@ import com.jme3.scene.VertexBuffer.Type;
 import com.jme3.scene.shape.Box;
 import com.jme3.util.BufferUtils;
 import java.io.*;
+import java.nio.file.Paths;
 import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -56,10 +59,11 @@ public class ModelViewer extends SimpleApplication {
     Node pivot;
     
     
-    void read(Node core) throws IOException {
+    void read(Node core) throws IOException, CorruptedFileException, SectionNotFoundException {
         
        
-       
+        CVR testfile = new CVR.Builder(Paths.get("/test/resources/A.cvr")).build();
+        
         Scanner scanner = new Scanner(new FileInputStream("C:\\Users\\Iceberg7\\Documents\\Programing Projects\\reverse it\\test.txt"), "UTF-8");
         try {
             String tmp;
@@ -203,7 +207,13 @@ public class ModelViewer extends SimpleApplication {
         } catch (IOException ex) {
             Logger.getLogger(testjmonkey.class.getName()).log(Level.SEVERE, null, ex);
             System.exit(0);
-        }
+        } catch (CorruptedFileException ex) {
+             Logger.getLogger(ModelViewer.class.getName()).log(Level.SEVERE, null, ex);
+             System.exit(0);
+         } catch (SectionNotFoundException ex) {
+             Logger.getLogger(ModelViewer.class.getName()).log(Level.SEVERE, null, ex);
+             System.exit(0);
+         }
     }
 
     

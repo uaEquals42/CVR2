@@ -17,6 +17,8 @@
 
 package CVR;
 
+import CVR.fileformat.CorruptedFileException;
+import CVR.fileformat.SectionNotFoundException;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -62,7 +64,7 @@ import org.slf4j.LoggerFactory;
     @Test
     public void check_color_palette(){
         for(int ii = 0; ii < cvr.getPalette().getPhysicalPalette().size(); ii++) {
-            System.out.println(""+  ii + cvr.getPalette().getPhysicalPalette().get(ii).toString());
+            log.debug("{} {} ", ii, cvr.getPalette().getPhysicalPalette().get(ii).toString());
         }
         
     
